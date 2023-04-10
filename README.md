@@ -62,13 +62,15 @@ pifop.execute("joe/example", "apikey_ABC123")
 # Documentation
 
 - [Overview](#overview)
-- [`Execution` Basic API](#execution-basic-api)
-  - [`pifop.execute()`](#pifopexecutefuncuid-apikey)
-  - [`setInput()`](#setinputinputid-content)
-  - [`withInput()`](#withinputcontent)
-  - [`onProgress(), onFinish(), onError()`](#onprogresslistener-onfinishlistener-onerrorlistener)
-  - [`onEvent()`](#oneventlistener)
-  - [`setMetadata()`](#setmetadatakey-value)
+- [`Execution`](#execution)
+  - [Constructor](#constructor)
+    - [`pifop.execute()`](#pifopexecutefuncuid-apikey)
+  - [Instance Methods](#instance-methods)
+    - [`setInput()`](#setinputinputid-content)
+    - [`withInput()`](#withinputcontent)
+    - [`onProgress(), onFinish(), onError()`](#onprogresslistener-onfinishlistener-onerrorlistener)
+    - [`onEvent()`](#oneventlistener)
+    - [`setMetadata()`](#setmetadatakey-value)
 - [Events](#events)
   - [`Event` Properties](#event-properties)
 
@@ -85,7 +87,9 @@ pifop.execute("joe/example", "apikey_ABC123") // 1. Initialize execution
   .onFinish(listener)                         // 5. Download output file(s)
 ```
 
-## `Execution` Basic API
+## `Execution`
+
+### Constructor
 
 #### `pifop.execute(funcUID, apiKey)`
 Creates and returns a self-managed `Execution` that will automatically initialize itself, upload the provided input, start the execution and terminate it once it has finished. The returned `Execution` is uninitialized, but you don't have to initialize it yourself. Just provide the input and set the event listeners as shown above and you are good to go.
@@ -93,7 +97,9 @@ Creates and returns a self-managed `Execution` that will automatically initializ
 - `funcUID`: a function Universal Identifier (UID). The UID of a function is a `string` with the format `author/id`, where `author` is the author of the function and `id` is the function `id`.
 - `apiKey`: an API key for the function `funcUID`.
 
----
+<br>
+
+### Instance Methods
 
 #### `setInput(inputId, content)`
 Set the `content` of input `inputId`. The provided input is not immediatelly uploaded. Rather, it will be uploaded once the `Execution` has been initialized in the server.
@@ -101,14 +107,10 @@ Set the `content` of input `inputId`. The provided input is not immediatelly upl
 - `inputId`: the id of the input file to which the `content` belongs.
 - `content`: the content of the input file with id `inputId`. Can be anything acceptable as a [`fetch body`](https://developer.mozilla.org/en-US/docs/Web/API/fetch), including `string`, [`Blob`](https://developer.mozilla.org/en-US/docs/Web/API/Blob), [`ArrayBuffer`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/ArrayBuffer), [`TypedArray`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray) and [`DataView`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/DataView).
 
----
-
 #### `withInput(content)`
 Same as `setInput`, but you don't have to provide an `inputId`. This only works for PIFOP functions that take a single file as input.
 
 - `content`: the content of the input file with id `inputId`. Can be anything acceptable as a [`fetch body`](https://developer.mozilla.org/en-US/docs/Web/API/fetch), including `string`, [`Blob`](https://developer.mozilla.org/en-US/docs/Web/API/Blob), [`ArrayBuffer`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/ArrayBuffer), [`TypedArray`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray) and [`DataView`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/DataView).
-
----
 
 #### `onProgress(listener), onFinish(listener), onError(listener)`
 Event listener setter for common [events](#events) that you may want to listen to.
@@ -121,8 +123,6 @@ Event listener setter for common [events](#events) that you may want to listen t
 - `onFinish`: the `listener` will listen to the `"result_ready"` event.
 - `onError`: the `listener` will listen to `"error"` events.
 
----
-
 #### `onEvent(listener)`
 
 Generic [event](#events) listener setter. This `listener` is called whenever an [event](#events) of any kind happens.
@@ -131,15 +131,11 @@ Generic [event](#events) listener setter. This `listener` is called whenever an 
   - `execution`: the `Execution` that is related to the event.
   - `event`: an `Event` object containing all the details pertaining the event. Read more about `Event` objects below.
 
----
-
 #### `setMetadata(key, value)`
 User-defined arbitrary data. That's for your convenience only. It allow you to associate some data with an execution and thus be able to access it, for instance, on event listeners, as such: `execution.metadata.myKey`.
 
 - `key`: the `string` that will be used as a key to accessing the `value`.
 - `value`: any object whatsoever.
-
----
 
 ## Events
 
