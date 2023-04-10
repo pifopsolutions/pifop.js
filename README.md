@@ -1,12 +1,12 @@
 # pifop.js 
 PIFOP Functions API Client library for Javascript
 
-| PIFOP FUNCTIONS IS AN EXPERIMENTAL UNDER-DEVELOPMENT FEATURE. USE IT AT YOUR OWN RISK. |
-|---|
+> **Warning**:
+> PIFOP FUNCTIONS IS AN EXPERIMENTAL UNDER-DEVELOPMENT FEATURE. USE IT AT YOUR OWN RISK.
 
 ## Quick start
 
-### Setup: load script
+### Load script
 ```HTML
 <script src="https://pifop.com/api/pifop.js"></script>
 ```
@@ -110,34 +110,99 @@ You can also add an error `listener` with `onError`, and, more generally, you ca
 ## `Execution` Basic API
 
 #### `pifop.execute(funcUID, apiKey)`
-Creates a self-managed `Execution` that will automatically initialize itself, upload the provided input, start the execution and terminate it once it has finished. The returned `Execution` is uninitialized, but you don't have to initialize it yourself. Just provide the input and set the event listeners as shown above and you are good to go.
+Creates and returns a self-managed `Execution` that will automatically initialize itself, upload the provided input, start the execution and terminate it once it has finished. The returned `Execution` is uninitialized, but you don't have to initialize it yourself. Just provide the input and set the event listeners as shown above and you are good to go.
+
+- `funcUID`: a function Universal Identifier (UID). The UID of a function is a `string` with the format `author/id`, where `author` is the author of the function and `id` is the function `id`.
+- `apiKey`: an API key for the function `funcUID`.
 
 ---
 
 #### `setInput(inputId, content)`
 Set the `content` of input `inputId`. The provided input is not immediatelly uploaded. Rather, it will be uploaded once the `Execution` has been initialized in the server.
 
+- `inputId`: the id of the input file to which the `content` belongs.
+- `content`: the content of the input file with id `inputId`.
+
 ---
 
 #### `withInput(content)`
 Same as `setInput`, but you don't have to provide an `inputId`. This only works for PIFOP functions that take a single file as input.
 
+- `content`: the content of the input file.
+
 ---
 
 #### `onProgress(listener), onFinish(listener), onError(listener), onEvent(listener)`
-Event listener setter for common events that you may want to listen to. `listener`s are passed the arguments `execution` and `event`.
+Event listener setter for common events that you may want to listen to.
 
-| Setter | `addEventListener` equivalent |
-|---|---|
-| `onProgress` | `addEventListener("execution_info", listener)` |
-| `onFinish` | `addEventListener("execution_terminated", listener)` |
-| `onError` | `addEventListener("error", listener)` |
-| `onEvent` | `addEventListener("any", listener)` |
+- `listener`: a function that will be called with arguments `listener(execution, event)`.
+  - `execution`: the `Execution` that is related to the event.
+  - `event`: an `Event` object containing all the details pertaining the event. Read more about `Event` objects below.
 
 ---
 
 #### `setMetadata(key, value)`
 User-defined arbitrary data. That's for your convenience, so that you can associate some data with an execution and thus be able to access it, for instance, on event listeners, as such: `execution.metadata.myKey`.
+
+- `key`: the `string` that will be used as a key to accessing the `value`.
+- `value`: any object whatsoever.
+
+## `Event` Object
+
+Use the *onSomething(...)* family of event `listener` setters of `Execution` and `Function` to add listeners for common events. Event listeners are passed two arguments: `listener(object, event)`, where `object` is either an `Execution` or a `Function`, depending on who is listening to that event, and `event` is an `Event` object.
+
+The members of the `Event` object vary accross event types, but in general, every `Event` has the following members:
+- `type`: type of the event.
+- `operation`: operation that was being perfomed when the event happened.
+- `data`: the data related to that event. Its contents depend on the event type. Read more below.
+- `objectType`: a `string` representing the type of the object related to the `operation` type. Can be `"execution"` or `"function"`.
+- `execution`: `Execution` object related to that event.
+- `func`: `Function` object related to that event.
+- `response`: the `Response` that we've got from the server.
+
+### `Event` Types and their `data`
+
+#### `"function_initialized"`
+The `func` object has been initialized and is ready to be used. The `data` member contains the function data.
+
+---
+
+#### `"execution_initialized"`
+The `execution` object has been initialized. The `data` member contains the execution data.
+
+---
+
+#### `"input_uploaded"`
+Input file has been uploaded to `execution`. The `data` member contains the input that has been uploaded.
+
+---
+
+#### `"execution_started"`
+The `execution` has been started. The `data` member contains the execution data.
+
+---
+
+#### `"execution_info"`
+Info about the `execution` has been retrieved. The `data` member contains the execution data.
+
+---
+
+#### `"execution_ended"`
+The `execution` has been ended. The `data` member contains the execution data.
+
+---
+
+#### `"output_retrieved"`
+An output file of `execution` has been retrieved. The `data` member contains the output that has been retrieved.
+
+---
+
+#### `"execution_stopped"`
+The `execution` has been stopped. The `data` member contains the execution data.
+
+---
+---
+---
 
 ## `Execution` Advanced API
 
