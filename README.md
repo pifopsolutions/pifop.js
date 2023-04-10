@@ -154,21 +154,21 @@ Use the *onSomething(...)* family of event `listener` setters of `Execution` and
 The members of the `Event` object vary accross event types, but in general, every `Event` has the following members:
 - `type`: type of the event.
 - `operation`: operation that was being perfomed when the event happened.
-- `data`: the data related to that event. Its contents depend on the event type. Read more below.
+- `data`: the data related to the event. Each event type will have a different `data`. See [Event Types](#event-types) to learn more.
 - `objectType`: a `string` representing the type of the object related to the `operation` type. Can be `"execution"` or `"function"`.
 - `execution`: `Execution` object related to that event.
 - `func`: `Function` object related to that event.
 - `response`: the `Response` that we've got from the server.
 
-### `Event` Types and their `data`
+### `Event` Types
 
 #### `"function_initialized"`
-The `func` object has been initialized and is ready to be used. The `data` member contains the function data.
+The `func` object has been initialized and is ready to be used. The `data` member contains the function data. `listener` setter: `function.onInit()`
 
 ---
 
 #### `"execution_initialized"`
-The `execution` object has been initialized. The `data` member contains the execution data.
+The `execution` object has been initialized. The `data` member contains the execution data. `listener` setter: `execution.onInit()`
 
 ---
 
@@ -183,12 +183,17 @@ The `execution` has been started. The `data` member contains the execution data.
 ---
 
 #### `"execution_info"`
-Info about the `execution` has been retrieved. The `data` member contains the execution data.
+Info about the `execution` has been retrieved. The `data` member contains the execution data. `listener` setter: `execution.onProgress()`
 
 ---
 
 #### `"execution_ended"`
-The `execution` has been ended. The `data` member contains the execution data.
+The `execution` has ended. The `data` member contains the execution data.
+
+---
+
+#### `"result_ready"`
+The `execution` has ended and all of its output files have been retrieved. Output files can be found in `execution.output`, or in `execution.result` if only one output file has been generated. If the single output is a JSON, `execution.result` will be the parsed output so you can access its members directly. If the single output is not a JSON, `execution.result` will be an `Output` object.
 
 ---
 
@@ -200,60 +205,4 @@ An output file of `execution` has been retrieved. The `data` member contains the
 #### `"execution_stopped"`
 The `execution` has been stopped. The `data` member contains the execution data.
 
----
----
----
-
-## `Execution` Advanced API
-
-The above basic functions are built on top of the advanced functions shown bellow. Unless you know what you are doing, you should stick to the basic API presented above.
-
-#### `initialize()`
-Sends request to initialize execution.
-Equivalent HTTP request: `POST func.pifop.com/:func_author/:func_id`
-
----
-
-#### `uploadInput(inputId, content)`
-Upload input `inputId`.
-Equivalent HTTP request: `POST func.pifop.com/:func_author/:func_id/executions/:exec_id/input/:input_id`
-
----
-
-#### `start()`
-Sends request to start the execution.
-Equivalent HTTP request: `POST func.pifop.com/:func_author/:func_id/executions/:exec_id/start`
-
----
-
-#### `getInfo()`
-Sends request to retrieve execution information, optionally including the terminal output.
-Equivalent HTTP request: `GET func.pifop.com/:func_author/:func_id/executions/:exec_id?stdout=...`
-
----
-
-#### `downloadOutput(outputId)`
-Downloads output `outputId`.
-Equivalent HTTP request: `GET func.pifop.com/:func_author/:func_id/executions/:exec_id/output/:output_id`
-
----
-
-#### `stop()`
-Sends request to stop the execution.
-Equivalent HTTP request: `POST func.pifop.com/:func_author/:func_id/executions/:exec_id/stop`
-
----
-
-#### `terminate()`
-Sends request to terminate the execution.
-Equivalent HTTP request: `DELETE func.pifop.com/:func_author/:func_id/executions/:exec_id`
-
----
-
-#### `addEventListener(type, listener)`
-General event listener setter. List of events:
-| Event type | Meaning |
-|---|---|
-| `"function_initialized"` | We've completed the initialization of the function being called. |
-| `"execution_initialized"` | We've receive the confirmation that the execution has been initialized on the optimization server. |
 
