@@ -56,7 +56,7 @@ pifop.execute("joe/example", "apikey_ABC123")
   .onError((execution, event) => {
       // Handle errors here
       console.log(event);
-  })
+  });
 ```
 
 # Documentation
@@ -82,9 +82,9 @@ The series of atomic actions that are needed to run an execution from start to f
 
 ```js
 pifop.execute("joe/example", "apikey_ABC123") // 1. Initialize execution
-  .setInput("input", myInput)                 // 2 and 3. Upload input file(s) and start execution
-  .onProgress(listener)                       // 4. Get terminal output periodically (optional)
-  .onFinish(listener)                         // 5. Download output file(s)
+  .setInput("input", myInput)                 // 2. Upload input file(s) and start execution
+  .onProgress(listener)                       // 3. Get terminal output periodically (optional)
+  .onFinish(listener)                         // 4. Download output file(s)
 ```
 
 ## `Execution`
