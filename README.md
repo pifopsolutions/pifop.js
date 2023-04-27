@@ -13,7 +13,7 @@
 ```
 
 #### Node.js
-```
+```shell
 npm install pifop
 ```
 
