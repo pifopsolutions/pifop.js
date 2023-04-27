@@ -7,12 +7,12 @@
 
 ## 0. Load script/module
 
-Browser:
+#### Browser
 ```HTML
 <script src="https://pifop.com/api/pifop.js"></script>
 ```
 
-Node.js:
+#### Node.js
 ```
 npm install pifop
 ```
@@ -104,7 +104,10 @@ Creates and returns a self-managed `Execution` that will automatically initializ
 
 - `funcUID`: a function Universal Identifier (UID). The UID of a function is a `string` with the format `author/id`, where `author` is the author of the function and `id` is the function `id`.
 - `apiKey`: an API key for the function `funcUID`.
-- `input`: if the function only accepts one input file, you can pass it as an argument. This is equivalent to calling `withInput(...)` after creating an `Execution`.
+- `input`: optional input content. You can only pass the input content as an argument if the Function being called only accepts one input. This is equivalent to calling `withInput(...)` after creating an `Execution`, e.g.:
+    ```JS
+    pifop.execute("joe/example", "apikey_ABC123").withInput(input);
+    ```
 
 <br>
 
