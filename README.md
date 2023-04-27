@@ -25,7 +25,7 @@ let pifop = require("pifop");
 ```js
 pifop.execute("joe/example", "apikey_ABC123", myInput)
   .onFinish((execution) => {
-      // Display the results here
+      // Display/use the results here
       console.log(execution.result);
   });
 ```
@@ -36,7 +36,7 @@ pifop.execute("joe/example", "apikey_ABC123")
   .setInput("input1", myInput1)
   .setInput("input2", myInput2)
   .onFinish((execution) => {
-      // Display the results here
+      // Display/use the results here
       console.log(execution.result);
   });
 ```
@@ -49,7 +49,7 @@ pifop.execute("joe/example", "apikey_ABC123", myInput)
       console.log(event.data.stdout);
   })
   .onFinish((execution) => {
-      // Display the results here
+      // Display/use the results here
       console.log(execution.result);
   });
 ```
@@ -58,7 +58,7 @@ pifop.execute("joe/example", "apikey_ABC123", myInput)
 ```js
 pifop.execute("joe/example", "apikey_ABC123", myInput)
   .onFinish((execution) => {
-      // Display the results here
+      // Display/use the results here
       console.log(execution.result);
   })
   .onError((execution, event) => {
