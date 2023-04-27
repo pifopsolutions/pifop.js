@@ -5,15 +5,25 @@
 
 # Quick start
 
-## Load script
+## 0. Load script/module
+
+Browser:
 ```HTML
 <script src="https://pifop.com/api/pifop.js"></script>
 ```
 
+Node.js:
+```
+npm install pifop
+```
+
+```JS
+let pifop = require("pifop");
+```
+
 ## 1. Execute a PIFOP Function that takes a single input file
 ```js
-pifop.execute("joe/example", "apikey_ABC123")
-  .withInput(myInput)
+pifop.execute("joe/example", "apikey_ABC123", myInput)
   .onFinish((execution) => {
       // Display the results here
       console.log(execution.result);
@@ -33,8 +43,7 @@ pifop.execute("joe/example", "apikey_ABC123")
 
 ## 3. Print terminal output during execution
 ```js
-pifop.execute("joe/example", "apikey_ABC123")
-  .withInput(myInput)
+pifop.execute("joe/example", "apikey_ABC123", myInput)
   .onProgress((execution, event) => {
       // Display stdout
       console.log(event.data.stdout);
@@ -47,8 +56,7 @@ pifop.execute("joe/example", "apikey_ABC123")
 
 ## 4. Handle errors
 ```js
-pifop.execute("joe/example", "apikey_ABC123")
-  .withInput(myInput)
+pifop.execute("joe/example", "apikey_ABC123", myInput)
   .onFinish((execution) => {
       // Display the results here
       console.log(execution.result);
@@ -91,11 +99,12 @@ pifop.execute("joe/example", "apikey_ABC123") // 1. Initialize execution
 
 ### Constructor
 
-#### `pifop.execute(funcUID, apiKey)`
+#### `pifop.execute(funcUID, apiKey [, input])`
 Creates and returns a self-managed `Execution` that will automatically initialize itself, upload the provided input, start the execution and terminate it once it has finished. The returned `Execution` is uninitialized, but you don't have to initialize it yourself. Just provide the input and set the event listeners as shown above and you are good to go.
 
 - `funcUID`: a function Universal Identifier (UID). The UID of a function is a `string` with the format `author/id`, where `author` is the author of the function and `id` is the function `id`.
 - `apiKey`: an API key for the function `funcUID`.
+- `input`: if the function only accepts one input file, you can pass it as an argument. This is equivalent to calling `withInput(...)` after creating an `Execution`.
 
 <br>
 
