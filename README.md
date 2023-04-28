@@ -18,7 +18,7 @@ npm install pifop
 ```
 
 ```JS
-let pifop = require("pifop");
+const pifop = require("pifop");
 ```
 
 ## 1. Execute a PIFOP Function that takes a single input file
