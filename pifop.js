@@ -5,20 +5,41 @@ let RUNTIME_ENVIRONMENT = undefined;
 
 if (typeof window !== 'undefined') {
     RUNTIME_ENVIRONMENT = "browser";
+} else if (typeof self !== 'undefined' && self instanceof WorkerGlobalScope) {
+    RUNTIME_ENVIRONMENT = "web-worker";
 } else if (typeof global !== "undefined") {
     RUNTIME_ENVIRONMENT = "node";
 } else {
-    console.error("Error: unknown runtime environment. Supported environments: browser and node.");
+    console.error("Error: unknown runtime environment. Supported environments: browser, node and web-worker.");
 }
 
 // Polyfills
 //-----------
-let Request = null;
 let fetch = null;
 
-if (RUNTIME_ENVIRONMENT == "node") {
+if (RUNTIME_ENVIRONMENT == "browser") {
+    fetch = window.fetch;
+} else if (RUNTIME_ENVIRONMENT == "node") {
     let nodefetch = require("node-fetch");
     
+    // Add support for Request as the first and only argument of fetch
+    //------------------------------------------------------------------
+    fetch = function(resource, options) {
+        if (typeof resource == "string") {
+            return nodefetch(resource, options);
+        } else {
+            return nodefetch(resource.input, resource);
+        }
+    }
+} else if (RUNTIME_ENVIRONMENT == "web-worker") {
+    fetch = self.fetch;
+}
+
+let Request = null;
+
+if (RUNTIME_ENVIRONMENT == "browser") {
+    Request = window.Request;
+} else if (RUNTIME_ENVIRONMENT == "node" || RUNTIME_ENVIRONMENT == "web-worker") {
     Request = class {
         constructor(input, init) {
             if (typeof input == "string") {
@@ -29,17 +50,6 @@ if (RUNTIME_ENVIRONMENT == "node") {
             }
         }
     };
-    
-    fetch = function(resource, options) {
-        if (typeof resource == "string") {
-            return nodefetch(resource, options);
-        } else {
-            return nodefetch(resource.input, resource);
-        }
-    }
-} else if (RUNTIME_ENVIRONMENT == "browser") {
-    Request = window.Request;
-    fetch = window.fetch;
 }
 
 // PIFOP Module
