@@ -1,4 +1,4 @@
-
+    
 // Runtime environment: where is this script running?
 //----------------------------------------------------
 let RUNTIME_ENVIRONMENT = undefined;
@@ -15,6 +15,23 @@ if (typeof window !== 'undefined') {
 
 // Polyfills
 //-----------
+let Request = null;
+
+if (RUNTIME_ENVIRONMENT == "browser") {
+    Request = window.Request;
+} else if (RUNTIME_ENVIRONMENT == "node" || RUNTIME_ENVIRONMENT == "web-worker") {
+    Request = class {
+        constructor(input, init) {
+            if (typeof input == "string") {
+                this.input = input;
+                Object.assign(this, init);
+            } else {
+                Object.assign(this, JSON.parse(JSON.stringify(input)));
+            }
+        }
+    };
+}
+
 let fetch = null;
 
 if (RUNTIME_ENVIRONMENT == "browser") {
@@ -33,23 +50,6 @@ if (RUNTIME_ENVIRONMENT == "browser") {
     }
 } else if (RUNTIME_ENVIRONMENT == "web-worker") {
     fetch = self.fetch;
-}
-
-let Request = null;
-
-if (RUNTIME_ENVIRONMENT == "browser") {
-    Request = window.Request;
-} else if (RUNTIME_ENVIRONMENT == "node" || RUNTIME_ENVIRONMENT == "web-worker") {
-    Request = class {
-        constructor(input, init) {
-            if (typeof input == "string") {
-                this.input = input;
-                Object.assign(this, init);
-            } else {
-                Object.assign(this, JSON.parse(JSON.stringify(input)));
-            }
-        }
-    };
 }
 
 // PIFOP Module
@@ -116,18 +116,21 @@ function PIFOPModule() {
           
           case "execution_initialized": {
             execution.data = event.data;
-            execution.id = event.data.id;
-            execution.endpoint = `https://${pifopEndpoint}/${execution.func.author}/${execution.func.id}/executions/${execution.id}`;
+            execution.setId(event.data.id);
             execution.initialized = true;
-            execution.apiKey = func.apiKey;
           } break;
           
           case "execution_info": {
-            let currentStatus = execution.data.status;
+            let prevStatus = execution.status;
             execution.data = event.data;
-            if (execution.data.status == "ended" && execution.data.status != currentStatus) {
+            execution.status = event.data.status;
+            if (execution.status == "ended" && prevStatus != execution.status) {
                 ended = true;
             }
+          } break;
+          
+          case "resuming": {
+            execution.initialized = true;
           } break;
           
           case "output_retrieved": {
@@ -154,31 +157,49 @@ function PIFOPModule() {
         }
         
         let readyToStart = ((event.type == "input_uploaded" || event.type == "execution_initialized") && execution.nextInputToUpload >= execution.providedInput.length);
-        let resultReady = ((event.type == "execution_ended" && !execution.generatedOutput.length) 
+        let resultReady = ((event.type == "execution_ended" && !execution.generatedOutput.length)
                         || (event.type == "output_retrieved" && execution.nextOutputToDownload >= execution.generatedOutput.length));
         
         if (execution) {
-            for (eventListener of execution.eventListeners) {
+            for (let i = 0; i < execution.eventListeners.length; ) {
+                let eventListener = execution.eventListeners[i];
                 if (eventListener.type == event.type || eventListener.type == "any") {
                     eventListener.listener(execution, event);
+                    if (eventListener.once) {
+                        execution.eventListeners.splice(i, 1);
+                        continue;
+                    }
                 }
+                ++i;
             }
         }
         
         if (func) {
-            for (eventListener of func.eventListeners) {
+            for (let i = 0; i < func.eventListeners.length; ) {
+                let eventListener = func.eventListeners[i];
                 if (eventListener.type == event.type || eventListener.type == "any") {
                     eventListener.listener(func, event);
+                    if (eventListener.once) {
+                        func.eventListeners.splice(i, 1);
+                        continue;
+                    }
                 }
+                ++i;
             }
         }
         
         if (event.type == "error" && event.operation == "function_initialization") {
             for (exec of func.executions) {
-                for (eventListener of exec.eventListeners) {
+                for (let i = 0; i < exec.eventListeners.length; ) {
+                    let eventListener = exec.eventListeners[i];
                     if (eventListener.type == event.type || eventListener.type == "any") {
                         eventListener.listener(exec, event);
+                        if (eventListener.once) {
+                            exec.eventListeners.splice(i, 1);
+                            continue;
+                        }
                     }
+                    ++i;
                 }
             }
         }
@@ -250,7 +271,7 @@ function PIFOPModule() {
           default: break;
         }
     }
-            
+    
     function handleResponse(operation, request, response, subject, outputId) {
         if (!("attempts" in request)) {
             request.attempts = 1;
@@ -269,6 +290,11 @@ function PIFOPModule() {
         }
         
         let successEventType = OperationSuccessEventType[operation];
+        
+        if (operation == "execution_info_retrieval" && !execution.initialized) {
+            successEventType = "resuming";
+        }
+        
         let objectType = getObjectType(operation);
         
         if (response.ok) {
@@ -314,9 +340,10 @@ function PIFOPModule() {
         }
     }
     
-    function createExecution(func) {
-        return {
+    function createExecution(func, execId) {
+        let result = {
             initialized: false,
+            id: undefined,
             endpoint: undefined,
             eventListeners: [],
             metadata: {},
@@ -332,6 +359,16 @@ function PIFOPModule() {
             func: func,
             apiKey: func.apiKey,
             getHTTPHeaders: function() {return {Authorization: `Bearer ${this.apiKey}`}},
+            ignoringLog: false,
+            ignoreLog: function(value) {
+                if (value == undefined) value = true;
+                this.ignoringLog = value;
+                return this;
+            },
+            setId: function(id) {
+                this.id = id;
+                this.endpoint = `https://${pifopEndpoint}/${this.func.author}/${this.func.id}/executions/${id}`;
+            },
             setMetadata: function(key, value) {
                 this.metadata[key] = value;
                 return this;
@@ -343,6 +380,16 @@ function PIFOPModule() {
                     clearTimeout(this.nextInfoRetrieval);
                     this.nextInfoRetrieval = null;
                 }
+            },
+            resume: function() {
+                this.getInfo(false);
+                
+                function resumeCallback(execution) {
+                    execution.getInfo();
+                    execution.onEvent(executionEventListener);
+                }
+                
+                this.addEventListener("resuming", resumeCallback, {once: true});
             },
             uploadNextInput: function() {
                 if (this.nextInputToUpload < this.providedInput.length) {
@@ -411,10 +458,14 @@ function PIFOPModule() {
                 let request = new Request(`${this.endpoint}`, {method: "DELETE", headers: this.getHTTPHeaders()});
                 fetch(request).then((response) => handleResponse("execution_termination", request, response, this));
             },
-            getInfo: function() {
-                // GET func.pifop.com/:func_author/:func_id/executions/:exec_id?stdout=...
-                let request = new Request(`${this.endpoint}?stdout=true`, {headers: this.getHTTPHeaders()});
+            getInfo: function(includeLog) {
+                if (includeLog == undefined) includeLog = !this.ignoringLog;
+                
+                // GET func.pifop.com/:func_author/:func_id/executions/:exec_id?include_log=...
+                let request = new Request(`${this.endpoint}${!includeLog ? "?include_log=false" : ""}`, {headers: this.getHTTPHeaders()});
                 fetch(request).then((response) => handleResponse("execution_info_retrieval", request, response, this));
+                
+                return this;
             },
             scheduleGetInfo: function() {
                 let execution = this;
@@ -453,13 +504,14 @@ function PIFOPModule() {
                 this.setInput("", content);
                 return this;
             },
-            addEventListener: function(type, listener) {
-                this.eventListeners.push({type, listener});
+            addEventListener: function(type, listener, once) {
+                if (once == undefined) once = false;
+                this.eventListeners.push({type, listener, once});
                 return this;
             },
             removeEventListener: function(type, listener) {
-                for (i in this.eventListeners) {
-                    let entry = this.eventListeners.listener[i];
+                for (let i in this.eventListeners) {
+                    let entry = this.eventListeners[i];
                     if (entry.type == type && entry.listener == listener) {
                         this.eventListeners.splice(i, 1);
                         break;
@@ -467,27 +519,38 @@ function PIFOPModule() {
                 }
                 return this;
             },
-            onEvent: function(listener) {
-                this.addEventListener("any", listener);
+            onEvent: function(listener, once) {
+                this.addEventListener("any", listener, once);
                 return this;
             },
-            onProgress: function(listener) {
-                this.addEventListener("execution_info", listener);
+            onProgress: function(listener, once) {
+                this.addEventListener("execution_info", listener, once);
                 return this;
             },
-            onFinish: function(listener) {
-                this.addEventListener("execution_terminated", listener);
+            onFinish: function(listener, once) {
+                this.addEventListener("execution_terminated", listener, once);
                 return this;
             },
-            onError: function(listener) {
-                this.addEventListener("error", listener);
+            onError: function(listener, once) {
+                this.addEventListener("error", listener, once);
                 return this;
             },
-            onInit: function(listener) {
-                this.addEventListener("execution_initialized", listener);
+            onInit: function(listener, once) {
+                this.addEventListener("execution_initialized", listener, once);
+                return this;
+            },
+            onStarted: function(listener, once) {
+                this.addEventListener("execution_started", listener, once);
                 return this;
             }
         };
+        
+        if (execId) {
+            result.setId(execId);
+            result.status = "running";
+        }
+        
+        return result;
     }
     
     function initFunction(funcUID, apiKey, masterKey) {
@@ -535,13 +598,25 @@ function PIFOPModule() {
                 
                 return execution;
             },
-            addEventListener: function(type, listener) {
-                this.eventListeners.push({type, listener});
+            resumeExecution: function(execId) {
+                let execution = createExecution(this, execId);
+                
+                if (this.initialized) {
+                    execution.resume();
+                } else {
+                    this.onInit(()=>execution.resume());
+                }
+                
+                return execution;
+            },
+            addEventListener: function(type, listener, once) {
+                if (once == undefined) once = false;
+                this.eventListeners.push({type, listener, once});
                 return this;
             },
-            removeEventListener: function(listener) {
-                for (i in this.eventListeners) {
-                    let entry = this.eventListeners.listener[i];
+            removeEventListener: function(type, listener) {
+                for (let i in this.eventListeners) {
+                    let entry = this.eventListeners[i];
                     if (entry.type == type && entry.listener == listener) {
                         this.eventListeners.splice(i, 1);
                         break;
@@ -549,16 +624,16 @@ function PIFOPModule() {
                 }
                 return this;
             },
-            onEvent: function(listener) {
-                this.addEventListener("any", listener);
+            onEvent: function(listener, once) {
+                this.addEventListener("any", listener, once);
                 return this;
             },
-            onInit: function(listener) {
-                this.addEventListener("function_initialized", listener);
+            onInit: function(listener, once) {
+                this.addEventListener("function_initialized", listener, once);
                 return this;
             },
-            onError: function(listener) {
-                this.addEventListener("error", listener);
+            onError: function(listener, once) {
+                this.addEventListener("error", listener, once);
                 return this;
             }
         };
@@ -582,6 +657,13 @@ function PIFOPModule() {
         return execution;
     }
     
+    function resumeExecution(funcUID, apiKey, execId) {
+        return initFunction(funcUID, apiKey)
+                 .resumeExecution(execId);
+        
+        return execution;
+    }
+    
     function getFuncIdFromUID(uid) {
         let array = uid.split("/");
         if (array.length == 2) {
@@ -601,7 +683,10 @@ function PIFOPModule() {
     return {
         initFunction: initFunction,
         execute: executeFunction,
-        setPIFOPEndpoint // for development only
+        resume: resumeExecution,
+        _dev: {
+            setPIFOPEndpoint
+        }
     };
 }
 
